@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gamified Study Planner</title>
+    <title>JedQuest Planner</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>NSAT & JedBot Prep</h1>
+            <h1>JedQuest Planner</h1>
             <div id="countdown-timer"></div>
         </header>
 
@@ -17,10 +18,11 @@
             <div class="left-panel">
                 <section id="progress-tracker">
                     <h2>Progress</h2>
+                    <p>Level: <span id="level">1</span></p>
                     <div class="xp-bar-container">
                         <div id="xp-bar"></div>
                     </div>
-                    <p>XP: <span id="xp-points">0</span></p>
+                    <p>XP: <span id="xp-points">0</span> / <span id="xp-to-next-level">100</span></p>
                     <p>Streak: <span id="streak-days">0</span> days</p>
                 </section>
 
@@ -36,33 +38,75 @@
                     <h2>Rewards</h2>
                     <ul id="rewards-list"></ul>
                 </section>
+
+                <section id="settings">
+                    <h2>Settings</h2>
+                    <button id="reset-progress">Reset All Progress</button>
+                </section>
             </div>
 
             <div class="right-panel">
-                <section id="daily-schedule">
-                    <h2>Daily Schedule</h2>
-                    <ul id="schedule-list">
-                        <li>Morning: NSAT Study</li>
-                        <li>Late Morning: Mixed Practice</li>
-                        <li>Afternoon: Review</li>
-                        <li>Evening: Timed Offline Practice</li>
-                        <li>Night: JedBot Build Session</li>
-                    </ul>
-                </section>
-
                 <section id="quest-board">
-                    <h2>Quest Board</h2>
-                    <div id="nsat-quests">
-                        <h3>NSAT Quests</h3>
-                        <ul id="nsat-quest-list"></ul>
+                    <div class="quest-header">
+                        <h2>Quest Board</h2>
+                        <button id="add-quest-btn">+ Add Quest</button>
                     </div>
-                    <div id="jedbot-quests">
-                        <h3>JedBot Quests</h3>
-                        <ul id="jedbot-quest-list"></ul>
+                    <div class="filter-controls">
+                        <select id="filter-category">
+                            <option value="all">All Categories</option>
+                            <option value="NSAT">NSAT Study</option>
+                            <option value="JedBot">JedBot Build</option>
+                            <option value="Personal">Personal</option>
+                        </select>
                     </div>
+                    <ul id="quest-list">
+                        <!-- Quests will be dynamically added here -->
+                    </ul>
                 </section>
             </div>
         </main>
+    </div>
+
+    <!-- Add/Edit Quest Modal -->
+    <div id="quest-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <form id="quest-form">
+                <h3 id="modal-title">Add New Quest</h3>
+                <input type="hidden" id="quest-id">
+                <div class="form-group">
+                    <label for="quest-name">Quest Name</label>
+                    <input type="text" id="quest-name" required placeholder="e.g., Physics Chapter 3">
+                </div>
+                <div class="form-group">
+                    <label for="quest-category">Category</label>
+                    <select id="quest-category">
+                        <option value="NSAT">NSAT Study</option>
+                        <option value="JedBot">JedBot Build</option>
+                        <option value="Personal">Personal</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="quest-priority">Priority</label>
+                    <select id="quest-priority">
+                        <option value="1">Low</option>
+                        <option value="2">Medium</option>
+                        <option value="3">High</option>
+                    </select>
+                </div>
+                 <div class="form-group">
+                    <label for="quest-xp">XP Value</label>
+                    <input type="number" id="quest-xp" value="50" min="10">
+                </div>
+                <div class="form-group">
+                    <label for="quest-notes">Notes</label>
+                    <textarea id="quest-notes" rows="3" placeholder="Add any details or sub-tasks..."></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" id="save-quest-btn">Save Quest</button>
+                    <button type="button" id="cancel-quest-btn">Cancel</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <script src="script.js"></script>

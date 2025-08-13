@@ -1,161 +1,182 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // --- COUNTDOWN TIMER ---
-    const countdownTimer = document.getElementById('countdown-timer');
-    const nsatExamDate = new Date('2025-10-12T10:00:00').getTime();
+    // --- DOM ELEMENTS ---
+    const countdownTimerEl = document.getElementById('countdown-timer');
+    const levelEl = document.getElementById('level');
+    const xpPointsEl = document.getElementById('xp-points');
+    const xpToNextLevelEl = document.getElementById('xp-to-next-level');
+    const xpBarEl = document.getElementById('xp-bar');
+    const streakDaysEl = document.getElementById('streak-days');
+    const questListEl = document.getElementById('quest-list');
 
-    function updateCountdown() {
-        const now = new Date().getTime();
-        const distance = nsatExamDate - now;
+    // Modal Elements
+    const questModalEl = document.getElementById('quest-modal');
+    const questForm = document.getElementById('quest-form');
+    const modalTitleEl = document.getElementById('modal-title');
+    const questIdInput = document.getElementById('quest-id');
+    const questNameInput = document.getElementById('quest-name');
+    const questCategoryInput = document.getElementById('quest-category');
+    const questPriorityInput = document.getElementById('quest-priority');
+    const questXpInput = document.getElementById('quest-xp');
+    const questNotesInput = document.getElementById('quest-notes');
 
-        const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+    // Buttons
+    const addQuestBtn = document.getElementById('add-quest-btn');
+    const cancelQuestBtn = document.getElementById('cancel-quest-btn');
+    const resetProgressBtn = document.getElementById('reset-progress');
 
-        countdownTimer.innerHTML = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+    // Filters
+    const filterCategoryEl = document.getElementById('filter-category');
 
-        if (distance < 0) {
-            clearInterval(interval);
-            countdownTimer.innerHTML = "EXAM DAY!";
-        }
-    }
-
-    const interval = setInterval(updateCountdown, 1000);
-
-    // --- QUESTS ---
-    let nsatQuests = [];
-    const subjects = ["Physics", "Chemistry", "Maths"];
-    subjects.forEach(subject => {
-        for (let i = 1; i <= 12; i++) {
-            nsatQuests.push({ name: `${subject} Chapter ${i}`, xp: 50, completed: false });
-        }
-    });
-
-    let jedbotQuests = [
-        { name: "Setup project structure", xp: 30, completed: false },
-        { name: "Implement basic UI", xp: 40, completed: false },
-        { name: "Design quest system logic", xp: 60, completed: false },
-        { name: "Implement Pomodoro Timer", xp: 50, completed: false },
-        { name: "Implement XP & Streak System", xp: 70, completed: false },
-        { name: "Add LocalStorage Persistence", xp: 80, completed: false },
-        { name: "Style the application", xp: 50, completed: false },
-        { name: "Finalize UI/UX", xp: 40, completed: false },
-    ];
-
-    const nsatQuestList = document.getElementById('nsat-quest-list');
-    const jedbotQuestList = document.getElementById('jedbot-quest-list');
-
-    function renderQuests() {
-        nsatQuestList.innerHTML = '';
-        jedbotQuestList.innerHTML = '';
-
-        nsatQuests.forEach((quest, index) => {
-            const questButton = quest.completed
-                ? `<button disabled>Completed</button>`
-                : `<button class="complete-quest" data-type="nsat" data-index="${index}">Complete</button>`;
-
-            nsatQuestList.innerHTML += `
-                <li class="${quest.completed ? 'completed' : ''}">
-                    <span>${quest.name}</span>
-                    <div class="quest-actions">
-                        ${questButton}
-                    </div>
-                </li>
-            `;
-        });
-
-        jedbotQuests.forEach((quest, index) => {
-            const questButton = quest.completed
-                ? `<button disabled>Completed</button>`
-                : `<button class="complete-quest" data-type="jedbot" data-index="${index}">Complete</button>`;
-
-            jedbotQuestList.innerHTML += `
-                <li class="${quest.completed ? 'completed' : ''}">
-                    <span>${quest.name}</span>
-                    <div class="quest-actions">
-                        ${questButton}
-                    </div>
-                </li>
-            `;
-        });
-    }
-
+    // --- STATE ---
+    let quests = [];
     let xp = 0;
     let streak = 0;
     let lastCompletionDate = null;
+    const XP_PER_LEVEL = 100;
 
-    const xpPointsSpan = document.getElementById('xp-points');
-    const xpBar = document.getElementById('xp-bar');
-    const streakDaysSpan = document.getElementById('streak-days');
-    const rewardsList = document.getElementById('rewards-list');
-
-    const rewards = {
-        100: "Snack break!",
-        250: "15-min free time",
-        500: "Customize JedBot theme"
-    };
-
-    function saveState() {
-        const state = {
-            xp,
-            streak,
-            lastCompletionDate,
-            nsatQuests,
-            jedbotQuests,
-            unlockedRewards: Array.from(rewardsList.children).map(li => li.id)
-        };
-        localStorage.setItem('studyPlannerState', JSON.stringify(state));
-    }
+    // --- STATE & UI MANAGEMENT ---
 
     function loadState() {
-        const savedState = localStorage.getItem('studyPlannerState');
-        if (!savedState) return;
-
-        const state = JSON.parse(savedState);
-        xp = state.xp || 0;
-        streak = state.streak || 0;
-        lastCompletionDate = state.lastCompletionDate;
-        if (state.nsatQuests) nsatQuests = state.nsatQuests;
-        if (state.jedbotQuests) jedbotQuests = state.jedbotQuests;
-
-        if (state.unlockedRewards) {
-            state.unlockedRewards.forEach(rewardId => {
-                const threshold = rewardId.split('-')[1];
-                if (rewards[threshold] && !document.getElementById(rewardId)) {
-                    const rewardItem = document.createElement('li');
-                    rewardItem.id = rewardId;
-                    rewardItem.textContent = rewards[threshold];
-                    rewardsList.appendChild(rewardItem);
-                }
-            });
+        const state = JSON.parse(localStorage.getItem('jedQuestState'));
+        if (state) {
+            quests = state.quests || [];
+            xp = state.xp || 0;
+            streak = state.streak || 0;
+            lastCompletionDate = state.lastCompletionDate;
         }
     }
 
-    function addXp(amount) {
-        xp += amount;
-        updateUi();
-        checkForRewards();
+    function saveState() {
+        const state = { quests, xp, streak, lastCompletionDate };
+        localStorage.setItem('jedQuestState', JSON.stringify(state));
+    }
+
+    function updateUI() {
+        // Update progress tracker
+        const currentLevel = Math.floor(xp / XP_PER_LEVEL) + 1;
+        const xpInCurrentLevel = xp % XP_PER_LEVEL;
+        levelEl.textContent = currentLevel;
+        xpPointsEl.textContent = xpInCurrentLevel;
+        xpToNextLevelEl.textContent = XP_PER_LEVEL;
+        xpBarEl.style.width = `${(xpInCurrentLevel / XP_PER_LEVEL) * 100}%`;
+        streakDaysEl.textContent = streak;
+
+        renderQuests();
         saveState();
     }
 
-    function updateUi() {
-        xpPointsSpan.textContent = xp;
-        streakDaysSpan.textContent = streak;
-        const xpForNextLevel = 100;
-        const percentage = (xp % xpForNextLevel) / xpForNextLevel * 100;
-        xpBar.style.width = `${percentage}%`;
+    function renderQuests() {
+        const filterValue = filterCategoryEl.value;
+        questListEl.innerHTML = '';
+
+        const filteredQuests = quests.filter(quest => filterValue === 'all' || quest.category === filterValue);
+
+        if (filteredQuests.length === 0) {
+            if (quests.length === 0) {
+                questListEl.innerHTML = `<p style="text-align:center;">No quests yet. Add one to get started!</p>`;
+            } else {
+                questListEl.innerHTML = `<p style="text-align:center;">No quests match this filter.</p>`;
+            }
+            return;
+        }
+
+        filteredQuests.forEach(quest => {
+            const questEl = document.createElement('li');
+            questEl.dataset.id = quest.id;
+            questEl.dataset.priority = quest.priority;
+            if (quest.completed) {
+                questEl.classList.add('completed');
+            }
+
+            questEl.innerHTML = `
+                <div class="quest-info">
+                    <span class="quest-name">${quest.name}</span>
+                    <span class="quest-category">${quest.category}</span>
+                    ${quest.notes ? `<p class="quest-notes">${quest.notes}</p>` : ''}
+                </div>
+                <div class="quest-actions">
+                    <button class="complete-btn">${quest.completed ? 'Undo' : 'Complete'}</button>
+                    <button class="edit-btn">Edit</button>
+                    <button class="delete-btn">Delete</button>
+                </div>
+            `;
+            questListEl.appendChild(questEl);
+        });
     }
 
-    function checkForRewards() {
-        for (const threshold in rewards) {
-            if (xp >= threshold && !document.querySelector(`#reward-${threshold}`)) {
-                const rewardItem = document.createElement('li');
-                rewardItem.id = `reward-${threshold}`;
-                rewardItem.textContent = rewards[threshold];
-                rewardsList.appendChild(rewardItem);
-                saveState();
-            }
+    // --- MODAL MANAGEMENT ---
+
+    function openModal(questToEdit = null) {
+        questForm.reset();
+        if (questToEdit) {
+            modalTitleEl.textContent = 'Edit Quest';
+            questIdInput.value = questToEdit.id;
+            questNameInput.value = questToEdit.name;
+            questCategoryInput.value = questToEdit.category;
+            questPriorityInput.value = questToEdit.priority;
+            questXpInput.value = questToEdit.xp;
+            questNotesInput.value = questToEdit.notes;
+        } else {
+            modalTitleEl.textContent = 'Add New Quest';
+            questIdInput.value = '';
         }
+        questModalEl.style.display = 'flex';
+    }
+
+    function closeModal() {
+        questModalEl.style.display = 'none';
+    }
+
+    // --- CRUD & GAMIFICATION ---
+
+    function handleFormSubmit(e) {
+        e.preventDefault();
+        const id = questIdInput.value;
+        const questData = {
+            name: questNameInput.value,
+            category: questCategoryInput.value,
+            priority: questPriorityInput.value,
+            xp: parseInt(questXpInput.value),
+            notes: questNotesInput.value,
+        };
+
+        if (id) { // Update existing quest
+            const quest = quests.find(q => q.id === id);
+            Object.assign(quest, questData);
+        } else { // Create new quest
+            const newQuest = {
+                id: Date.now().toString(),
+                ...questData,
+                completed: false,
+            };
+            quests.push(newQuest);
+        }
+        closeModal();
+        updateUI();
+    }
+
+    function handleQuestAction(e) {
+        const questEl = e.target.closest('li');
+        if (!questEl) return;
+
+        const questId = questEl.dataset.id;
+        const quest = quests.find(q => q.id === questId);
+
+        if (e.target.classList.contains('complete-btn')) {
+            quest.completed = !quest.completed;
+            if (quest.completed) {
+                updateStreak();
+                addXp(quest.xp);
+                confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+            } else {
+                addXp(-quest.xp); // Subtract XP if undone
+            }
+        } else if (e.target.classList.contains('edit-btn')) {
+            openModal(quest);
+        } else if (e.target.classList.contains('delete-btn')) {
+            quests = quests.filter(q => q.id !== questId);
+        }
+        updateUI();
     }
 
     function updateStreak() {
@@ -182,82 +203,56 @@ document.addEventListener('DOMContentLoaded', () => {
         lastCompletionDate = new Date().toISOString();
     }
 
-    function completeQuest(type, index) {
-        const questList = type === 'nsat' ? nsatQuests : jedbotQuests;
-        const quest = questList[index];
+    function addXp(amount) {
+        xp += amount;
+        if (xp < 0) xp = 0;
+    }
 
-        if (!quest.completed) {
-            quest.completed = true;
-            updateStreak();
-            addXp(quest.xp);
-            renderQuests();
+    function resetAllProgress() {
+        if (confirm('Are you sure you want to reset all your progress? This cannot be undone.')) {
+            quests = [];
+            xp = 0;
+            streak = 0;
+            lastCompletionDate = null;
+            updateUI();
         }
     }
 
-    document.querySelector('#quest-board').addEventListener('click', (e) => {
-        if (e.target.classList.contains('complete-quest')) {
-            const type = e.target.dataset.type;
-            const index = parseInt(e.target.dataset.index, 10);
-            completeQuest(type, index);
+    // --- COUNTDOWN TIMER ---
+    const nsatExamDate = new Date('2025-10-12T10:00:00').getTime();
+    function updateCountdown() {
+        const now = new Date().getTime();
+        const distance = nsatExamDate - now;
+        if (distance < 0) {
+            clearInterval(countdownInterval);
+            countdownTimerEl.innerHTML = "EXAM DAY!";
+            return;
         }
+        const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+        countdownTimerEl.innerHTML = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+    }
+    const countdownInterval = setInterval(updateCountdown, 1000);
+
+    // --- EVENT LISTENERS ---
+    addQuestBtn.addEventListener('click', () => openModal());
+    questModalEl.addEventListener('click', (e) => {
+        if (e.target === questModalEl) closeModal();
     });
+    cancelQuestBtn.addEventListener('click', closeModal);
+    questForm.addEventListener('submit', handleFormSubmit);
+    questListEl.addEventListener('click', handleQuestAction);
+    resetProgressBtn.addEventListener('click', resetAllProgress);
+    filterCategoryEl.addEventListener('change', renderQuests);
 
-    // --- POMODORO TIMER ---
-    const pomodoroDisplay = document.getElementById('pomodoro-display');
-    const startBtn = document.getElementById('start-pomodoro');
-    const pauseBtn = document.getElementById('pause-pomodoro');
-    const resetBtn = document.getElementById('reset-pomodoro');
-
-    let timerInterval;
-    let timeLeft = 25 * 60;
-    let isPaused = true;
-
-    function updatePomodoroDisplay() {
-        const minutes = Math.floor(timeLeft / 60);
-        const seconds = timeLeft % 60;
-        pomodoroDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    }
-
-    function startTimer() {
-        if (isPaused) {
-            isPaused = false;
-            timerInterval = setInterval(() => {
-                timeLeft--;
-                updatePomodoroDisplay();
-                if (timeLeft <= 0) {
-                    clearInterval(timerInterval);
-                    alert("Pomodoro session complete! Take a short break.");
-                    addXp(25); // Reward for completing a pomodoro
-                    resetTimer();
-                }
-            }, 1000);
-        }
-    }
-
-    function pauseTimer() {
-        isPaused = true;
-        clearInterval(timerInterval);
-    }
-
-    function resetTimer() {
-        isPaused = true;
-        clearInterval(timerInterval);
-        timeLeft = 25 * 60;
-        updatePomodoroDisplay();
-    }
-
-    startBtn.addEventListener('click', startTimer);
-    pauseBtn.addEventListener('click', pauseTimer);
-    resetBtn.addEventListener('click', resetTimer);
-
-    // --- INITIALIZE ---
-    function initialize() {
+    // --- INITIALIZATION ---
+    function init() {
         loadState();
+        updateUI();
         updateCountdown();
-        renderQuests();
-        updatePomodoroDisplay();
-        updateUi();
     }
 
-    initialize();
+    init();
 });
