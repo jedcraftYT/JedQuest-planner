@@ -32,7 +32,15 @@ document.addEventListener('DOMContentLoaded', () => {
     let xp = 0;
     let streak = 0;
     let lastCompletionDate = null;
+    let unlockedRewards = [];
     const XP_PER_LEVEL = 100;
+    const LEVEL_REWARDS = {
+        2: "Novice Planner",
+        5: "Quest Conqueror",
+        10: "Productivity Master",
+        15: "JedBot Engineer",
+        20: "NSAT Champion"
+    };
 
     // --- STATE & UI MANAGEMENT ---
 
@@ -43,11 +51,12 @@ document.addEventListener('DOMContentLoaded', () => {
             xp = state.xp || 0;
             streak = state.streak || 0;
             lastCompletionDate = state.lastCompletionDate;
+            unlockedRewards = state.unlockedRewards || [];
         }
     }
 
     function saveState() {
-        const state = { quests, xp, streak, lastCompletionDate };
+        const state = { quests, xp, streak, lastCompletionDate, unlockedRewards };
         localStorage.setItem('jedQuestState', JSON.stringify(state));
     }
 
@@ -55,6 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update progress tracker
         const currentLevel = Math.floor(xp / XP_PER_LEVEL) + 1;
         const xpInCurrentLevel = xp % XP_PER_LEVEL;
+
         levelEl.textContent = currentLevel;
         xpPointsEl.textContent = xpInCurrentLevel;
         xpToNextLevelEl.textContent = XP_PER_LEVEL;
@@ -62,6 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
         streakDaysEl.textContent = streak;
 
         renderQuests();
+        renderRewards();
         saveState();
     }
 
@@ -82,6 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         filteredQuests.forEach(quest => {
             const questEl = document.createElement('li');
+            questEl.draggable = true;
             questEl.dataset.id = quest.id;
             questEl.dataset.priority = quest.priority;
             if (quest.completed) {
@@ -145,7 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
             Object.assign(quest, questData);
         } else { // Create new quest
             const newQuest = {
-                id: Date.now().toString(),
+                id: `${Date.now()}-${Math.random()}`,
                 ...questData,
                 completed: false,
             };
@@ -206,6 +218,26 @@ document.addEventListener('DOMContentLoaded', () => {
     function addXp(amount) {
         xp += amount;
         if (xp < 0) xp = 0;
+        checkForNewRewards();
+    }
+
+    function checkForNewRewards() {
+        const currentLevel = Math.floor(xp / XP_PER_LEVEL) + 1;
+        for (const level in LEVEL_REWARDS) {
+            if (currentLevel >= level && !unlockedRewards.includes(LEVEL_REWARDS[level])) {
+                unlockedRewards.push(LEVEL_REWARDS[level]);
+            }
+        }
+    }
+
+    function renderRewards() {
+        const rewardsListEl = document.getElementById('rewards-list');
+        rewardsListEl.innerHTML = '';
+        unlockedRewards.forEach(reward => {
+            const li = document.createElement('li');
+            li.textContent = `🏆 ${reward}`;
+            rewardsListEl.appendChild(li);
+        });
     }
 
     function resetAllProgress() {
@@ -214,9 +246,77 @@ document.addEventListener('DOMContentLoaded', () => {
             xp = 0;
             streak = 0;
             lastCompletionDate = null;
+            unlockedRewards = [];
             updateUI();
         }
     }
+
+    // --- POMODORO TIMER ---
+    const pomodoroDisplayEl = document.getElementById('pomodoro-display');
+    const startPomodoroBtn = document.getElementById('start-pomodoro');
+    const pausePomodoroBtn = document.getElementById('pause-pomodoro');
+    const resetPomodoroBtn = document.getElementById('reset-pomodoro');
+
+    let pomodoroState = 'stopped'; // 'stopped', 'running', 'paused'
+    let pomodoroEndTime;
+    let pomodoroTimeLeft;
+    let pomodoroAnimationId;
+    const POMODORO_DURATION = 25 * 60 * 1000; // 25 minutes
+
+    function updatePomodoroDisplay(time) {
+        const minutes = Math.floor(time / 60000);
+        const seconds = Math.floor((time % 60000) / 1000);
+        pomodoroDisplayEl.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    function pomodoroLoop() {
+        const remainingTime = pomodoroEndTime - Date.now();
+        if (remainingTime <= 0) {
+            updatePomodoroDisplay(0);
+            pomodoroState = 'stopped';
+            cancelAnimationFrame(pomodoroAnimationId);
+            alert('Pomodoro session complete! Take a short break.');
+            addXp(25);
+            updateUI();
+            resetPomodoro();
+            return;
+        }
+        updatePomodoroDisplay(remainingTime);
+        pomodoroAnimationId = requestAnimationFrame(pomodoroLoop);
+    }
+
+    function startPomodoro() {
+        if (pomodoroState === 'running') return;
+
+        pomodoroState = 'running';
+        pomodoroEndTime = Date.now() + (pomodoroTimeLeft || POMODORO_DURATION);
+        pomodoroLoop();
+    }
+
+    function pausePomodoro() {
+        if (pomodoroState !== 'running') return;
+
+        pomodoroState = 'paused';
+        pomodoroTimeLeft = pomodoroEndTime - Date.now();
+        cancelAnimationFrame(pomodoroAnimationId);
+    }
+
+    function resetPomodoro() {
+        pomodoroState = 'stopped';
+        cancelAnimationFrame(pomodoroAnimationId);
+        pomodoroTimeLeft = null;
+        updatePomodoroDisplay(POMODORO_DURATION);
+    }
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden && pomodoroState === 'running') {
+            pausePomodoro();
+        }
+    });
+
+    startPomodoroBtn.addEventListener('click', startPomodoro);
+    pausePomodoroBtn.addEventListener('click', pausePomodoro);
+    resetPomodoroBtn.addEventListener('click', resetPomodoro);
 
     // --- COUNTDOWN TIMER ---
     const nsatExamDate = new Date('2025-10-12T10:00:00').getTime();
@@ -247,11 +347,70 @@ document.addEventListener('DOMContentLoaded', () => {
     resetProgressBtn.addEventListener('click', resetAllProgress);
     filterCategoryEl.addEventListener('change', renderQuests);
 
+    // --- DRAG-N-DROP LOGIC ---
+    let draggedQuestId = null;
+
+    questListEl.addEventListener('dragstart', (e) => {
+        if (e.target.matches('li')) {
+            draggedQuestId = e.target.dataset.id;
+            setTimeout(() => {
+                e.target.classList.add('dragging');
+            }, 0);
+        }
+    });
+
+    questListEl.addEventListener('dragend', (e) => {
+        if (e.target.matches('li')) {
+            e.target.classList.remove('dragging');
+        }
+    });
+
+    questListEl.addEventListener('dragover', (e) => {
+        e.preventDefault(); // Simply allowing the drop is enough
+    });
+
+    questListEl.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const targetElement = getDragAfterElement(questListEl, e.clientY);
+        const draggedIndex = quests.findIndex(q => q.id === draggedQuestId);
+
+        // Remove from old position
+        const [draggedItem] = quests.splice(draggedIndex, 1);
+
+        if (targetElement == null) {
+            // Dropped at the end
+            quests.push(draggedItem);
+        } else {
+            // Dropped before targetElement
+            const targetId = targetElement.dataset.id;
+            const targetIndex = quests.findIndex(q => q.id === targetId);
+            quests.splice(targetIndex, 0, draggedItem);
+        }
+
+        // Re-render from the source of truth to ensure consistency
+        updateUI();
+    });
+
+    function getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll('li:not(.dragging)')];
+
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
     // --- INITIALIZATION ---
     function init() {
         loadState();
         updateUI();
         updateCountdown();
+        updatePomodoroDisplay(POMODORO_DURATION);
     }
 
     init();
