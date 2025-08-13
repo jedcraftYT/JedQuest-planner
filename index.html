@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gamified Study Planner</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>NSAT & JedBot Prep</h1>
+            <div id="countdown-timer"></div>
+        </header>
+
+        <main>
+            <div class="left-panel">
+                <section id="progress-tracker">
+                    <h2>Progress</h2>
+                    <div class="xp-bar-container">
+                        <div id="xp-bar"></div>
+                    </div>
+                    <p>XP: <span id="xp-points">0</span></p>
+                    <p>Streak: <span id="streak-days">0</span> days</p>
+                </section>
+
+                <section id="pomodoro-timer">
+                    <h2>Pomodoro Timer</h2>
+                    <div id="pomodoro-display">25:00</div>
+                    <button id="start-pomodoro">Start</button>
+                    <button id="pause-pomodoro">Pause</button>
+                    <button id="reset-pomodoro">Reset</button>
+                </section>
+
+                <section id="rewards">
+                    <h2>Rewards</h2>
+                    <ul id="rewards-list"></ul>
+                </section>
+            </div>
+
+            <div class="right-panel">
+                <section id="daily-schedule">
+                    <h2>Daily Schedule</h2>
+                    <ul id="schedule-list">
+                        <li>Morning: NSAT Study</li>
+                        <li>Late Morning: Mixed Practice</li>
+                        <li>Afternoon: Review</li>
+                        <li>Evening: Timed Offline Practice</li>
+                        <li>Night: JedBot Build Session</li>
+                    </ul>
+                </section>
+
+                <section id="quest-board">
+                    <h2>Quest Board</h2>
+                    <div id="nsat-quests">
+                        <h3>NSAT Quests</h3>
+                        <ul id="nsat-quest-list"></ul>
+                    </div>
+                    <div id="jedbot-quests">
+                        <h3>JedBot Quests</h3>
+                        <ul id="jedbot-quest-list"></ul>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
