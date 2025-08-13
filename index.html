@@ -28,7 +28,8 @@
 
                 <section id="pomodoro-timer">
                     <h2>Pomodoro Timer</h2>
-                    <div id="pomodoro-display">25:00</div>
+                    <h3 id="pomodoro-mode">Focus</h3>
+                    <div id="pomodoro-display">45:00</div>
                     <button id="start-pomodoro">Start</button>
                     <button id="pause-pomodoro">Pause</button>
                     <button id="reset-pomodoro">Reset</button>
@@ -41,7 +42,7 @@
 
                 <section id="settings">
                     <h2>Settings</h2>
-                    <button id="reset-progress">Reset All Progress</button>
+                    <button id="open-settings-btn">Open Settings</button>
                 </section>
             </div>
 
@@ -109,6 +110,43 @@
         </div>
     </div>
 
+    <div id="settings-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <h3>Settings</h3>
+            <form id="settings-form">
+                <div class="form-group">
+                    <label for="theme-select">Theme</label>
+                    <select id="theme-select">
+                        <option value="cyber-neon">Cyber Neon</option>
+                        <option value="light-mode">Light Mode</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="focus-duration">Focus Duration (minutes)</label>
+                    <input type="number" id="focus-duration" min="5" max="60" step="1">
+                </div>
+                <div class="form-group">
+                    <label for="break-duration">Break Duration (minutes)</label>
+                    <input type="number" id="break-duration" min="1" max="30" step="1">
+                </div>
+                <div class="form-group">
+                    <label class="toggle-switch">
+                        Enable Sound Notifications
+                        <input type="checkbox" id="sound-toggle">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <hr>
+                <div class="form-group">
+                    <button type="button" id="reset-progress-from-settings" class="btn-danger">Reset All Progress</button>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="close-settings-btn">Close</button>
+                </div>
+            </form>
+        </div>
+    </div>
     <script src="script.js"></script>
+    <audio id="notification-sound" src="https://www.soundjay.com/buttons/sounds/button-3.mp3" preload="auto"></audio>
 </body>
 </html>
